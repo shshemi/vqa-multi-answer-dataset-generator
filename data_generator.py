@@ -441,8 +441,8 @@ class QuestionsGroup:
             all_questions.extend(qt(image).questions)
         return all_questions
 
-    def generate_random(self, image):
-        return random.choice(self.generate_all(image))
+    def generate_random(self, image, count=1):
+        return random.sample(self.generate_all(image), count)
 
 
 def generate_train_validation(output_dir, image_repeats=3, balance_approach="group"):
@@ -542,7 +542,7 @@ def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15):
         for _ in range(np.random.randint(min_shapes, max_shapes + 1)):
             image.add_shape(ShapePool.default().random().new(color=ColorPool.default().random(bg.colors)))
         image.save(os.path.join(output_dir, "images"))
-        questions = QuestionsGroup().generate_random(image)
+        questions = QuestionsGroup().generate_random(image, 5)
         data.extend(questions)
 
     with open(os.path.join(output_dir, "questions_validation.json"), "w") as file:
