@@ -235,6 +235,9 @@ class ColorPool:
                 colors.append(color)
         return colors
 
+    def colors_len(self):
+        return len(self.colors())
+
     @staticmethod
     def default():
         if ColorPool.__default_instance is None:
@@ -261,6 +264,9 @@ class ShapePool:
             if shape not in exclude:
                 shapes.append(shape)
         return shapes
+
+    def shapes_len(self):
+        return len(self.shapes())
 
     @staticmethod
     def default():
@@ -445,10 +451,25 @@ class QuestionsGroup:
         return random.sample(self.generate_all(image), count)
 
 
-def generate_train_validation(output_dir, image_repeats=3, balance_approach="group"):
+def show_progress(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+    # Print New Line on Complete
+    if iteration == total:
+        print()
+
+
+def generate_train_validation(output_dir, image_repeats=1, balance_approach="group"):
     # generate data
     all_data = []
-    for bg_color, shape, shape_color, image_index in pool_iteration("colors", "shapes", "colors", image_repeats):
+    all_space = pool_iteration("colors", "shapes", "colors", image_repeats)
+    total_iterations = ColorPool.default().colors_len() * \
+                       ShapePool.default().shapes_len() * \
+                       ColorPool.default().colors_len() * \
+                       image_repeats
+    for i, (bg_color, shape, shape_color, image_index) in enumerate(all_space):
         bg = Background(bg_color, (50, 50))
         image = Image(bg)
         image.save(os.path.join(output_dir, "images"))
@@ -462,6 +483,7 @@ def generate_train_validation(output_dir, image_repeats=3, balance_approach="gro
         image.save(os.path.join(output_dir, "images"))
         questions = QuestionsGroup().generate_all(image)
         all_data.extend(questions)
+        show_progress(i, total_iterations, prefix="Train Generation")
 
     print("Total generated questions:", len(all_data))
 
@@ -534,7 +556,7 @@ def generate_train_validation(output_dir, image_repeats=3, balance_approach="gro
         print("Validation data file:", file.name)
 
 
-def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15):
+def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, questions_per_image=5):
     data = []
     for i in range(image_count):
         bg = Background(ColorPool.default().random(count=2), (500, 500), "random")
@@ -542,7 +564,8 @@ def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15):
         for _ in range(np.random.randint(min_shapes, max_shapes + 1)):
             image.add_shape(ShapePool.default().random().new(color=ColorPool.default().random(bg.colors)))
         image.save(os.path.join(output_dir, "images"))
-        questions = QuestionsGroup().generate_random(image, 5)
+        questions = QuestionsGroup().generate_random(image, questions_per_image)
+        show_progress(i, image_count, prefix="Test Generation")
         data.extend(questions)
 
     with open(os.path.join(output_dir, "questions_validation.json"), "w") as file:
@@ -555,7 +578,8 @@ if __name__ == '__main__':
     # print = PrettyPrinter(indent=4).pprint
     import shutil
 
-    output_dir = "new_ds"
+    output_dir_name = "new_ds"
+    output_dir = os.path.join("outputs", output_dir_name)
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.mkdir(output_dir)
