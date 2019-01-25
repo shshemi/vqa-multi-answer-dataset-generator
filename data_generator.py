@@ -350,6 +350,20 @@ class ShapeTypeQuestion(BaseQuestion):
         self.add_question("what is the shape", self.image.shapes, "unknown_shape")
 
 
+class ColorShapeTypeQuestion(BaseQuestion):
+
+    def get_type(self):
+        return "color object"
+
+    def create_questions(self):
+        for c in pool_iteration("colors"):
+            answers = []
+            for shape in self.image.shapes:
+                if shape.color == c:
+                    answers.append(shape)
+            self.add_question(f"what is the {c} shape", answers, "unknown_shape")
+
+
 class ShapeColorQuestion(BaseQuestion):
 
     def get_type(self):
@@ -431,6 +445,7 @@ class QuestionsGroup:
             self.question_types = [
                 BackgroundColorQuestion,
                 ShapeTypeQuestion,
+                ColorShapeTypeQuestion,
                 ShapeColorQuestion,
                 ShapeTypeColorQuestion,
                 CloseShapeColorQuestion,
@@ -447,8 +462,11 @@ class QuestionsGroup:
             all_questions.extend(qt(image).questions)
         return all_questions
 
-    def generate_random(self, image, count=1):
-        return random.sample(self.generate_all(image), count)
+    def generate_random(self, image, type_count=1):
+        questions = []
+        for qt in random.sample(self.question_types, type_count):
+            questions.extend(qt(image).questions)
+        return questions
 
 
 def show_progress(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
@@ -461,8 +479,9 @@ def show_progress(iteration, total, prefix='', suffix='', decimals=1, length=100
         print()
 
 
-def generate_train_validation(output_dir, image_repeats=1, balance_approach="group"):
+def generate_train_validation(output_dir, image_repeats=1, balance_approach="group", test_split_ratio=0.01):
     # generate data
+    print()
     all_data = []
     all_space = pool_iteration("colors", "shapes", "colors", image_repeats)
     total_iterations = ColorPool.default().colors_len() * \
@@ -470,14 +489,18 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
                        ColorPool.default().colors_len() * \
                        image_repeats
     for i, (bg_color, shape, shape_color, image_index) in enumerate(all_space):
+        if bg_color == shape_color:
+            continue
+
+        # generate invalid image and question
         bg = Background(bg_color, (50, 50))
         image = Image(bg)
         image.save(os.path.join(output_dir, "images"))
         questions = QuestionsGroup().generate_all(image)
         all_data.extend(questions)
-        if bg_color == shape_color:
-            continue
         bg = Background(bg_color, (50, 50))
+
+        # generate valid image and question
         image = Image(bg, image_index + 1) if image_repeats > 1 else Image(bg)
         image.add_shape(shape.new(shape_color))
         image.save(os.path.join(output_dir, "images"))
@@ -485,6 +508,7 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
         all_data.extend(questions)
         show_progress(i, total_iterations, prefix="Train Generation")
 
+    print()
     print("Total generated questions:", len(all_data))
 
     # balance data
@@ -543,7 +567,7 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
 
     # spliting to validation and test
     from sklearn.model_selection import train_test_split
-    data_train, data_validation = train_test_split(balanced_data, test_size=0.01)
+    data_train, data_validation = train_test_split(balanced_data, test_size=test_split_ratio)
     print("Total number of train data", len(data_train))
     print("Total number of validation data", len(data_validation))
 
@@ -556,7 +580,7 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
         print("Validation data file:", file.name)
 
 
-def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, questions_per_image=5):
+def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, question_types_per_image=2):
     data = []
     for i in range(image_count):
         bg = Background(ColorPool.default().random(count=2), (500, 500), "random")
@@ -564,10 +588,11 @@ def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, question
         for _ in range(np.random.randint(min_shapes, max_shapes + 1)):
             image.add_shape(ShapePool.default().random().new(color=ColorPool.default().random(bg.colors)))
         image.save(os.path.join(output_dir, "images"))
-        questions = QuestionsGroup().generate_random(image, questions_per_image)
+        questions = QuestionsGroup().generate_random(image, question_types_per_image)
         show_progress(i, image_count, prefix="Test Generation")
         data.extend(questions)
 
+    print()
     with open(os.path.join(output_dir, "questions_validation.json"), "w") as file:
         json.dump(data, file)
         print("Test data file:", file.name)
