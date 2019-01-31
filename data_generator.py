@@ -200,17 +200,18 @@ class Image:
 
     @property
     def name(self):
+        import hashlib
+        name = self.background.name
         if len(self.shapes) > 0:
             str_shapes = "_".join([s.name for s in self.shapes])
             if self.__suffix is None:
-                return f"{str_shapes}_on_{self.background.name}"
+                name = f"{str_shapes}_on_{self.background.name}"
             else:
-                return f"{str_shapes}_on_{self.background.name}_{self.__suffix}"
-        else:
-            return self.background.name
+                name = f"{str_shapes}_on_{self.background.name}_{self.__suffix}"
+        return hashlib.md5(name.encode()).hexdigest()
 
     def save(self, dir):
-        path = os.path.join(dir, self.name if len(self.name) < 128 else self.name[:128]) + ".png"
+        path = os.path.join(dir, self.name) + ".png"
         self.image.save(path)
 
 
@@ -479,7 +480,7 @@ def show_progress(iteration, total, prefix='', suffix='', decimals=1, length=100
         print()
 
 
-def generate_train_validation(output_dir, image_repeats=1, balance_approach="group", test_split_ratio=0.01):
+def generate_train_validation(output_dir, image_repeats=1, balance_approach="group", validation_split_ratio=0.01):
     # generate data
     print()
     all_data = []
@@ -527,7 +528,7 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
 
     balanced_data = []
 
-    if balance_approach == "group":
+    if balance_approach == "categorical":
         data_groups = {
             "yes/no": ["yes", "no"],
             "colors": [c.name for c in pool_iteration("colors")] + ["unknown_color"],
@@ -539,18 +540,23 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
 
         print("Group minimums:")
         for gname, glist in data_groups.items():
-            group_min = min([answer_count[a] for a in glist])
+            group_min = min([answer_count[a] if a in answer_count else 0 for a in glist])
             print(gname, group_min)
+            if group_min == 0:
+                continue
             for a in glist:
                 balanced_data.extend(data_table[a][:group_min])
 
-    elif balance_approach == "all":
+    elif balance_approach == "blindfold":
         answers_min_count = min([v for _, v in answer_count.items()])
         for answer, qlist in data_table.items():
             balanced_data.extend(qlist[:answers_min_count])
 
-    else:
+    elif balance_approach == "none":
         balanced_data = all_data
+
+    else:
+        raise Exception(f"{balance_approach} is not a valid data balance approach")
 
     print("Total number of questions of balancing", len(balanced_data))
     data_table = {}
@@ -567,7 +573,7 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
 
     # spliting to validation and test
     from sklearn.model_selection import train_test_split
-    data_train, data_validation = train_test_split(balanced_data, test_size=test_split_ratio)
+    data_train, data_validation = train_test_split(balanced_data, test_size=validation_split_ratio)
     print("Total number of train data", len(data_train))
     print("Total number of validation data", len(data_validation))
 
@@ -587,13 +593,18 @@ def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, question
         image = Image(bg, i)
         for _ in range(np.random.randint(min_shapes, max_shapes + 1)):
             image.add_shape(ShapePool.default().random().new(color=ColorPool.default().random(bg.colors)))
-        image.save(os.path.join(output_dir, "images"))
-        questions = QuestionsGroup().generate_random(image, question_types_per_image)
+        image.save(os.path.join(output_dir, "images_test"))
+        questions = QuestionsGroup([
+                BackgroundColorQuestion,
+                ShapeTypeQuestion,
+                ShapeColorQuestion,
+                CloseShapeColorQuestion,
+            ]).generate_random(image, question_types_per_image)
         show_progress(i, image_count, prefix="Test Generation")
         data.extend(questions)
 
     print()
-    with open(os.path.join(output_dir, "questions_validation.json"), "w") as file:
+    with open(os.path.join(output_dir, "questions_test.json"), "w") as file:
         json.dump(data, file)
         print("Test data file:", file.name)
 
@@ -603,16 +614,12 @@ if __name__ == '__main__':
     # print = PrettyPrinter(indent=4).pprint
     import shutil
 
-    output_dir_name = "new_ds"
+    output_dir_name = "synthetic_vqa"
     output_dir = os.path.join("outputs", output_dir_name)
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.mkdir(output_dir)
-    train_output_dir = os.path.join(output_dir, "train")
-    test_output_dir = os.path.join(output_dir, "test")
-    os.mkdir(train_output_dir)
-    os.mkdir(test_output_dir)
-    os.mkdir(os.path.join(train_output_dir, "images"))
-    os.mkdir(os.path.join(test_output_dir, "images"))
-    generate_train_validation(train_output_dir)
-    generate_test(test_output_dir, 1000)
+    os.mkdir(os.path.join(output_dir, "images"))
+    os.mkdir(os.path.join(output_dir, "images_test"))
+    generate_train_validation(output_dir)
+    generate_test(output_dir, 1000)
