@@ -449,10 +449,6 @@ class QuestionsGroup:
                 ColorShapeTypeQuestion,
                 ShapeColorQuestion,
                 ShapeTypeColorQuestion,
-                CloseShapeColorQuestion,
-                ShapeExistenceQuestion,
-                ColorExistenceQuestion,
-                ShapeTypeExistenceQuestion,
             ]
         else:
             self.question_types = question_types
@@ -530,7 +526,6 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
 
     if balance_approach == "categorical":
         data_groups = {
-            "yes/no": ["yes", "no"],
             "colors": [c.name for c in pool_iteration("colors")] + ["unknown_color"],
             "shapes": [s.name for s in pool_iteration("shapes")] + ["unknown_shape"]
         }
@@ -594,12 +589,7 @@ def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, question
         for _ in range(np.random.randint(min_shapes, max_shapes + 1)):
             image.add_shape(ShapePool.default().random().new(color=ColorPool.default().random(bg.colors)))
         image.save(os.path.join(output_dir, "images_test"))
-        questions = QuestionsGroup([
-                BackgroundColorQuestion,
-                ShapeTypeQuestion,
-                ShapeColorQuestion,
-                CloseShapeColorQuestion,
-            ]).generate_random(image, question_types_per_image)
+        questions = QuestionsGroup().generate_all(image)
         show_progress(i, image_count, prefix="Test Generation")
         data.extend(questions)
 
@@ -610,16 +600,28 @@ def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, question
 
 
 if __name__ == '__main__':
-    # from pprint import PrettyPrinter
-    # print = PrettyPrinter(indent=4).pprint
     import shutil
+    import argparse
+    import sys
 
-    output_dir_name = "synthetic_vqa"
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument("-o", "--output-directory-name", default="synthetic_vqa", help="Output directory name")
+    argument_parser.add_argument("--image-repeat", type=int, default=1)
+    argument_parser.add_argument("--balance-approach", choices=["categorical", "blindfold", "none"], default="categorical")
+    argument_parser.add_argument("--validation-split", type=float, default=0.01)
+    argument_parser.add_argument("--test-image-count", type=int, default=1000)
+    argument_parser.add_argument("--test-min-shapes-count", type=int, default=1)
+    argument_parser.add_argument("--test-max-shapes-count", type=int, default=15)
+    argument_parser.add_argument("--question-types-per-image", type=int, default=2)
+    args = argument_parser.parse_args()
+    print(args)
+
+    output_dir_name = args.output_directory_name
     output_dir = os.path.join("outputs", output_dir_name)
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.mkdir(output_dir)
     os.mkdir(os.path.join(output_dir, "images"))
     os.mkdir(os.path.join(output_dir, "images_test"))
-    generate_train_validation(output_dir)
-    generate_test(output_dir, 1000)
+    generate_train_validation(output_dir, args.image_repeat, args.balance_approach, args.validation_split)
+    generate_test(output_dir, args.test_image_count, args.test_min_shapes_count, args.test_max_shapes_count, args.question_types_per_image)
