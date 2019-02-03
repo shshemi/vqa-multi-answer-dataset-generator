@@ -321,8 +321,8 @@ class BaseQuestion:
     def add_question(self, question, answer, default_answer="no_answer"):
         if type(answer) is not list:
             answer = [answer]
-        if len(answer) == 0:
-            answer.append(default_answer)
+        if len(answer) != 1:
+            answer += [default_answer]
         answer = [str(obj) for obj in answer]
         answer = list(set(answer))
         self.__questions.append({
@@ -581,7 +581,7 @@ def generate_train_validation(output_dir, image_repeats=1, balance_approach="gro
         print("Validation data file:", file.name)
 
 
-def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15, question_types_per_image=2):
+def generate_test(output_dir, image_count, min_shapes=7, max_shapes=15):
     data = []
     for i in range(image_count):
         bg = Background(ColorPool.default().random(count=2), (500, 500), "random")
@@ -612,7 +612,6 @@ if __name__ == '__main__':
     argument_parser.add_argument("--test-image-count", type=int, default=1000)
     argument_parser.add_argument("--test-min-shapes-count", type=int, default=1)
     argument_parser.add_argument("--test-max-shapes-count", type=int, default=15)
-    argument_parser.add_argument("--question-types-per-image", type=int, default=2)
     args = argument_parser.parse_args()
     print(args)
 
@@ -624,4 +623,4 @@ if __name__ == '__main__':
     os.mkdir(os.path.join(output_dir, "images"))
     os.mkdir(os.path.join(output_dir, "images_test"))
     generate_train_validation(output_dir, args.image_repeat, args.balance_approach, args.validation_split)
-    generate_test(output_dir, args.test_image_count, args.test_min_shapes_count, args.test_max_shapes_count, args.question_types_per_image)
+    generate_test(output_dir, args.test_image_count, args.test_min_shapes_count, args.test_max_shapes_count)
