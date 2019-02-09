@@ -94,7 +94,6 @@ class Background:
     def __init__(self, colors, size, background_type="solid"):
         if type(colors) is not list:
             colors = [colors]
-        self.__colors = colors
         self.__size = size
         self.__background_type_table = {
             "solid": self.__solid,
@@ -104,10 +103,14 @@ class Background:
         if background_type == "random":
             background_type = random.choice([*self.__background_type_table])
         self.__type = background_type
+        if background_type == "solid":
+            while len(colors) > 1:
+                colors.pop()
+        self.__colors = colors
 
     @property
     def name(self):
-        str_color = "_".join([c.name for c in self.__colors])
+        str_color = "_".join([c.name for c in self.colors])
         return f"{str_color}_{self.__type}"
 
     @property
@@ -318,10 +321,10 @@ class BaseQuestion:
     def get_type(self):
         return ""
 
-    def add_question(self, question, answer, default_answer="no_answer"):
+    def add_question(self, question, answer, default_answer=None):
         if type(answer) is not list:
             answer = [answer]
-        if len(answer) != 1:
+        if len(answer) != 1 and default_answer is not None:
             answer += [default_answer]
         answer = [str(obj) for obj in answer]
         answer = list(set(answer))

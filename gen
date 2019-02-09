@@ -1,0 +1,16 @@
+python data_generator.py -o synthetic_4_vqa_categorical_01 --image-repeat 4 --balance-approach categorical --validation-split 0.01 &&
+python data_generator.py -o synthetic_1_vqa_categorical_01 --image-repeat 1 --balance-approach categorical --validation-split 0.01 &&
+python data_generator.py -o synthetic_4_vqa_categorical_01 --image-repeat 4 --balance-approach categorical --validation-split 0.01 &&
+python data_generator.py -o synthetic_1_vqa_categorical_01 --image-repeat 1 --balance-approach categorical --validation-split 0.01 &&
+python data_generator.py -o synthetic_4_blindfold_01 --image-repeat 4 --balance-approach blindfold --validation-split 0.01 &&
+python data_generator.py -o synthetic_1_blindfold_01 --image-repeat 1 --balance-approach blindfold --validation-split 0.01 &&
+python data_generator.py -o synthetic_4_blindfold_01 --image-repeat 4 --balance-approach blindfold --validation-split 0.01 &&
+python data_generator.py -o synthetic_1_blindfold_01 --image-repeat 1 --balance-approach blindfold --validation-split 0.01 &&
+python data_generator.py -o synthetic_4_vqa_categorical_5 --image-repeat 4 --balance-approach categorical --validation-split 0.5 &&
+python data_generator.py -o synthetic_1_vqa_categorical_5 --image-repeat 1 --balance-approach categorical --validation-split 0.5 &&
+python data_generator.py -o synthetic_4_vqa_categorical_5 --image-repeat 4 --balance-approach categorical --validation-split 0.5 &&
+python data_generator.py -o synthetic_1_vqa_categorical_5 --image-repeat 1 --balance-approach categorical --validation-split 0.5 &&
+python data_generator.py -o synthetic_4_blindfold_5 --image-repeat 4 --balance-approach blindfold --validation-split 0.5 &&
+python data_generator.py -o synthetic_1_blindfold_5 --image-repeat 1 --balance-approach blindfold --validation-split 0.5 &&
+python data_generator.py -o synthetic_4_blindfold_5 --image-repeat 4 --balance-approach blindfold --validation-split 0.5 &&
+python data_generator.py -o synthetic_1_blindfold_5 --image-repeat 1 --balance-approach blindfold --validation-split 0.5
